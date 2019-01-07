@@ -1,0 +1,73 @@
+---
+title: "Coursera Machine Learning Project"
+author: "Kevin Graebel"
+date: "December 3, 2018"
+output: html_document
+---
+### Loading of full data set
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First, it is necessary to load the packages needed.
+```{r, echo=TRUE, message = FALSE, warning = FALSE}
+library(dplyr)
+library(caret)
+library(ggplot2)
+library(data.table)
+library(randomForest)
+```
+
+
+```{r, warning = FALSE, cache=TRUE, cache.lazy=FALSE}
+pmlTrain <- read.csv(file = "pml-training.csv", header = TRUE)
+pmlTest <- read.csv(file = "pml-testing.csv", header = TRUE)
+```
+
+First, We will eliminate columns that are mostly NA.
+
+```{r}
+naCols <- which(apply(pmlTrain,2,anyNA))
+pmlTrain <- pmlTrain[, -naCols]
+pmlTest <- pmlTest[, -naCols]
+```
+
+Next, we can strip out the variables with near zero variability to eliminate
+unnecessary covariates, including the timestamp data at the front.
+
+```{r}
+nzv <- nearZeroVar(pmlTrain)
+pmlTrain <- pmlTrain[,-nzv]
+pmlTest <- pmlTest[,-nzv]
+pmlTrain <- pmlTrain[,-c(1:6)]
+pmlTest <- pmlTest[,-c(1:6)]
+```
+
+Now, we will split into a training and validation set to test the accuracy of the model 
+before applying it to the actual testing set of the quiz.
+```{r}
+intrain <- createDataPartition(pmlTrain$classe, p = 0.75, list = FALSE)
+pmlTrain1 <- pmlTrain[intrain,]
+pmlValid1 <- pmlTrain[-intrain,]
+```
+
+Now, we can build a random forest model and review the accuracy of the confusion matrix
+compared to the validation training set.
+
+```{r}
+modelRF <- randomForest(classe ~., data = pmlTrain1)
+predRF <- predict(modelRF, pmlValid1)
+confusionMatrix(pmlValid1$classe, predRF)
+#table(predict(modFit, pmlTest), pmlTest$classe)
+```
+
+Given that the results of this look strong, we can apply this model to the testing 
+data set to answer the quiz questions
+```{r}
+predict(modelRF, pmlTest)
+```
+
+
+###Citation of the dataset and literature review.
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
